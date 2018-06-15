@@ -1,0 +1,7 @@
+
+pytest
+jinja2
+dkfileutils
+watchdog
+dk-tasklib
+invoke

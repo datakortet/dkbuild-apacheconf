@@ -1,0 +1,249 @@
+{%- set ssl_sertificate = "${SRV}/local/ssl/..." %}
+{%- set site_root = "${SRV}/www/" + site.sitename %}
+{%- set apache22 = true %}
+{%- set apache24 = false %}
+
+{%- if wsgi is not defined -%}
+   {% set wsgi = {} %}
+{%- endif -%}
+
+{%- if site.django is defined %}
+   {%- set django = site.django %}
+{% else %}
+   {%- set django = "yes" %}
+{% endif -%}
+{%- if site.allow_trace is defined %}
+   {%- set allow_trace = site.allow_trace %}
+{% else %}
+   {%- set allow_trace = False %}
+{% endif -%}
+
+{%- if site.docroot is defined -%}
+   {%- set docroot = site.docroot %}
+{% else %}
+   {%- set docroot = site_root + "/docroot" %}
+{%- endif -%}
+
+{% if docroot_opts is not defined %}
+   {% set docroot_opts = {} %}
+{% endif %}
+   
+{%- set server_admin = server.admin %}
+{%- set redirect_to_https = false %}
+
+{%- if site.https is defined -%}
+    {% set use_https = True %}
+    {%- if site.https == 'yes' -%}
+       {%- set ports = [443, 80] %}
+    {%- elif site.https == 'only' -%}
+       {%- set ports = [443, 80] %}
+       {%- set redirect_to_https = true %}
+    {%- endif %}
+{%- else -%}
+    {% set use_https = False %}
+    {% set ports = [80] %}
+{%- endif -%}
+Define SERVERNAME site.sitename
+
+
+{%- for port in ports %}
+<VirtualHost *:{{ port }}>
+    ServerName {{ site.dns }}
+    {%- if site.dns_alias is defined  %}
+    {%- for alias in site.dns_alias.split('\n') %}
+    {% if alias -%}
+    ServerAlias {{ alias }}
+    {%- endif %}
+    {%- endfor %}
+    {%- endif %}
+
+    # these will be availablee from request.META
+    SetEnv DK_SITE_NAME {{ site.sitename }}
+    SetEnv DK_SITE_DNS {{ site.dns }}
+    SetEnv DK_SITE_ROOT {{ site_root }}
+    SetEnv DK_SRV_ROOT ${SRV}
+    SetEnv DKSTATICROOT ${SRV}/data/static
+    {% if django == 'yes' %}
+    SetEnv DK_VIRTUAL_ENV {{ site.virtual_env }}
+    SetEnv DKROOT ${SRV}/src/datakortet
+    {% endif %}
+    ServerAdmin {{ server_admin }}
+    DocumentRoot {{ docroot }}
+    <Directory "{{ docroot }}">
+        Options {{ docroot_opts.options|default('Indexes FollowSymLinks MultiViews') }}
+        AllowOverride {{ docroot_opts.allow_override|default('None') }}
+        {% if not docroot_opts.hide_order is defined -%}
+        Order {{ docroot_opts.order|default('allow,deny') }} {%- endif %}
+        {% if not docroot_opts.hide_allow is defined -%}
+        Allow {{ docroot_opts.allow|default('from all') }} {%- endif %}
+        {% if docroot_opts.require is defined -%}
+        Require {{ docroot_opts.require }} {%- endif %}
+    </Directory>
+
+    ErrorLog /var/log/apache2/{{ site.sitename }}-error.log
+    CustomLog /var/log/apache2/{{ site.sitename }}-access.log combined
+    ServerSignature Off
+
+    <Location /server-status>
+        SetHandler server-status
+        Order allow,deny
+        Allow from ${AllowFromISP}
+        Allow from 127.0.0.1
+    </Location>
+
+    {% if port == 80 and redirect_to_https -%}
+    RewriteEngine On
+    RewriteRule /(.*) https://%{SERVER_NAME}/$1
+    {% else %}
+
+    SetOutputFilter DEFLATE
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml application/x-javascript text/css application/javascript image/svg+xml
+    SetEnvIfNoCase Request_URI \.(?:gif|jpe?g|png|pdf|swf)$ no-gzip dont-vary
+    Header append Vary User-Agent env=!dont-vary
+    AddType image/svg+xml svg svgz
+    AddEncoding gzip svgz
+
+    {% if port == 443 -%}
+    # SSL Certificates
+    SSLEngine on
+    <IfDefine DKSTAGING>
+        SSLCertificateFile ${LETSENCRYPT}/${SERVERNAME}/${SERVERNAME}.cer
+        SSLCertificateKeyFile ${LETSENCRYPT}/${SERVERNAME}/${SERVERNAME}.key
+        SSLCertificateChainFile ${LETSENCRYPT}/${SERVERNAME}/ca.cer
+    </IfDefine>
+    <IfDefine !DKSTAGING>
+        SSLCertificateFile {{ ssl_sertificate }}/epost_datakortet_no.crt
+        SSLCertificateKeyFile {{ ssl_sertificate }}/epost_datakortet_no.key
+        SSLCertificateChainFile {{ ssl_sertificate }}/DigiCertCA.crt
+    </IfDefine>
+    SetEnvIf User-Agent ".*MSIE.*" ssl-unclean-shutdown
+
+    # IE >= 9, Android >= 2.2, Java >= 6
+    # SSLCipherSuite EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH
+    # The real world is ugly..
+    SSLCipherSuite EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH:ECDHE-RSA-AES128-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA128:DHE-RSA-AES128-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES128-GCM-SHA128:ECDHE-RSA-AES128-SHA384:ECDHE-RSA-AES128-SHA128:ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES128-SHA:DHE-RSA-AES128-SHA128:DHE-RSA-AES128-SHA128:DHE-RSA-AES128-SHA:DHE-RSA-AES128-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA384:AES128-GCM-SHA128:AES128-SHA128:AES128-SHA128:AES128-SHA:AES128-SHA:DES-CBC3-SHA:HIGH:!aNULL:!eNULL:!EXPORT:!DES:!MD5:!PSK:!RC4
+    SSLProtocol all -SSLv2 -SSLv3
+    SSLHonorCipherOrder On
+    {% if redirect_to_https -%} {# not using ; includeSubDomains https://developer.mozilla.org/en-US/docs/Web/Security/HTTP_strict_transport_security#Preloading_Strict_Transport_Security #}
+    Header always set Strict-Transport-Security "max-age=63072000; preload"
+    {% endif %}
+    {% if not site.hide_frame_options is defined or site.hide_frame_options == True -%}
+    Header always set X-Frame-Options {{ site.frame_options|default('SAMEORIGIN') }}
+    {% endif -%}
+    Header always set X-Content-Type-Options nosniff
+    
+    # Requires Apache >= 2.4 
+    #SSLCompression off
+    #SSLSessionTickets Off 
+    #SSLUseStapling on 
+    #SSLStaplingCache "shmcb:logs/stapling-cache(150000)"
+
+    # Due to CRIME and BREACH it is not safe to use compression over https, 
+    # howvever, turning it off generally has major performance repercussions..
+    # SetEnv no-gzip 1
+
+    # BREACH migitation (turn off gzip only for foreign requests)
+    SetEnvIfNoCase Referer .* self_referer=no
+    SetEnvIfNoCase Referer ^https://{{ site.dns|replace(".", "\\.") }}/ self_referer=yes
+    SetEnvIf self_referer ^no$ no-gzip
+    Header append Vary User-Agent env=!dont-vary
+
+    {% else %} {# if port != 443 #}
+    {% endif %}  {# if port == 443 #}
+
+    {% if "hide_public_cache_control" not in site %}
+    <FilesMatch "\.(ico|flv|jpg|jpeg|png|svg|svgz|gif|woff2)$">
+        Header set Cache-Control "public"
+    </FilesMatch>
+    {% endif %}
+
+    {% if "cors" in site %}
+    Header set Access-Control-Allow-Origin "{{ site.cors }}"
+    {% endif %}
+
+    ExpiresActive On
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType application/pdf "access plus 1 year"
+    ExpiresByType application/javascript "access plus 1 year"
+    ExpiresByType text/css "access plus 1 year"
+    {% if site.hide_etag is defined %}
+    Header unset ETag
+    FileETag None
+    {% else %}
+    FileETag MTime Size
+    {% endif %}    
+
+    {% if site.www_prefix is defined and site.www_prefix == 'require' %}
+    <IfModule mod_rewrite.c>
+        RewriteEngine On
+        RewriteCond %{HTTP_HOST} !^www\. [NC]
+        RewriteRule ^(.*)$ http://{{ site.dns }}/ [L,R=301]
+    </IfModule>
+    {%- endif %}
+
+    {% if site.www_prefix is defined and site.www_prefix == 'omit' %}
+    <IfModule mod_rewrite.c>
+        RewriteEngine On
+        RewriteCond %{HTTP_HOST} ^www\. [NC]
+        RewriteRule ^(.*)$ http{% if port == 443 %}s{% endif %}://{{ site.dns }}/ [L,R=301]
+    </IfModule>
+    {%- endif %}
+    {% if not allow_trace %}
+    <IfModule mod_rewrite.c>
+        RewriteCond %{REQUEST_METHOD} ^(TRACE|TRACK|OPTIONS|PROPFIND)
+        RewriteRule .* - [F]
+    </IfModule>
+    {% endif %}
+    {% if django == 'yes' %}
+
+    {#
+        From mod_wsgi v. 3.0+ certain configuation directives can be specified
+        on the WSGIScriptAlias directive directly, e.g. process & application 
+        group, 
+
+            WSGIScriptAlias / {{ site_root }}/wsgi.py \
+                process-group={{ site.sitename }}     \
+                application-group=%{GLOBAL}
+
+    #}
+    
+    {% if (use_https and port == 443) or (not use_https and port == 80) %}
+    {# first, or only, instance #}
+    WSGIDaemonProcess {{ site.sitename }} \
+        display-name={{ site.sitename }} \
+	{%- if wsgi.processes -%}processes={{ wsgi.processes }}{%- endif -%}\
+        threads={{ wsgi.threads|default(50) }} \
+        maximum-requests={{ wsgi.maximum_requests|default(10000) }} \
+        umask=0002 \
+        {% if apache22 -%} home={{ site_root }} {% endif %}\
+        python-path=${SRV}/www:${SRV}/src:${SRV}/venv/{{ site.virtual_env }}/lib/python2.7/site-packages \
+        python-eggs=${SRV}/.python-eggs
+    
+    WSGIScriptAlias / {{ site_root }}/wsgi.py  \
+        process-group={{ site.sitename }}      \
+        application-group=%{GLOBAL}
+    {% endif %} {# site.https #}
+
+    {% if (use_https and port == 80) %}
+    WSGIProcessGroup {{ site.sitename }}
+    WSGIScriptAlias / {{ site_root }}/wsgi.py
+    {% endif %}
+    
+    {% endif %} {# django == 'yes' #}
+
+    Alias /favicon.ico {{ site_root }}/docroot/favicon.ico
+    Alias /robots.txt {{ site_root }}/docroot/robots.txt
+    Alias /cookies.html {{ site_root }}/docroot/cookies.html
+    Alias /privacy-policy.html {{ site_root }}/docroot/privacy-policy.html
+
+    {% if django == 'yes' %}
+    Alias /static/ {{ site_root }}/static/
+    Alias /media/ {{ site_root }}/media/
+    {% endif %}{# django == yes #}
+    
+    {% endif %}{# redirect_to_https #}
+</VirtualHost>
+{% endfor %}
