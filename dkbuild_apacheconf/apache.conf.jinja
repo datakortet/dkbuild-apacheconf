@@ -43,7 +43,7 @@
     {% set use_https = False %}
     {% set ports = [80] %}
 {%- endif -%}
-Define SERVERNAME site.sitename
+Define SERVERNAME {{ site.sitename }}
 
 
 {%- for port in ports %}
@@ -214,7 +214,7 @@ Define SERVERNAME site.sitename
     {# first, or only, instance #}
     WSGIDaemonProcess {{ site.sitename }} \
         display-name={{ site.sitename }} \
-	{%- if wsgi.processes -%}processes={{ wsgi.processes }}{%- endif -%}\
+        {% if wsgi.processes -%}processes={{ wsgi.processes }}{%- endif %} \
         threads={{ wsgi.threads|default(50) }} \
         maximum-requests={{ wsgi.maximum_requests|default(10000) }} \
         umask=0002 \

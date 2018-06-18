@@ -5,13 +5,14 @@ DEFAULTS = {
         'admin': None,
     },
     'site': {
-        'dns': 'www.acme.com',
-        'sitename': 'acme',
-        'virtual_env': 'acmeenv',
+        'ports': [80],
+        'dns': 'www.domain-name.com',
+        'sitename': 'sitename',
+        'virtual_env': 'virtual_env',
         'www_prefix': None,
 
     },
     'wsgi': {
-
+        'processes': 4,
     }
 }
