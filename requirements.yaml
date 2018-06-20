@@ -4,6 +4,7 @@ dkbuild-apacheconf:
   deps:
     - dkfileutils
     - jinja2
+    - future
   devdeps:
     - pytest
     - dk-tasklib:

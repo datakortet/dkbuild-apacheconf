@@ -1,11 +1,5 @@
 {%- set ssl_sertificate = "${SRV}/local/ssl/..." %}
-{%- set site_root = "${SRV}/www/" + site.sitename %}
-{%- set apache22 = true %}
-{%- set apache24 = false %}
-
-{%- if wsgi is not defined -%}
-   {% set wsgi = {} %}
-{%- endif -%}
+{%- set site_root = "${SRV}/www/" + site.sitename -%}
 
 {%- if site.django is defined %}
    {%- set django = site.django %}
@@ -24,9 +18,9 @@
    {%- set docroot = site_root + "/docroot" %}
 {%- endif -%}
 
-{% if docroot_opts is not defined %}
+{%- if docroot_opts is not defined %}
    {% set docroot_opts = {} %}
-{% endif %}
+{% endif -%}
    
 {%- set server_admin = server.admin %}
 {%- set redirect_to_https = false %}
@@ -43,10 +37,8 @@
     {% set use_https = False %}
     {% set ports = [80] %}
 {%- endif -%}
-Define SERVERNAME {{ site.sitename }}
 
-
-{%- for port in ports %}
+{%- for port in ports -%}
 <VirtualHost *:{{ port }}>
     ServerName {{ site.dns }}
     {%- if site.dns_alias is defined  %}
@@ -67,7 +59,7 @@ Define SERVERNAME {{ site.sitename }}
     SetEnv DK_VIRTUAL_ENV {{ site.virtual_env }}
     SetEnv DKROOT ${SRV}/src/datakortet
     {% endif %}
-    ServerAdmin {{ server_admin }}
+    {% if server.admin %}ServerAdmin {{ server.admin }}{% endif %}
     DocumentRoot {{ docroot }}
     <Directory "{{ docroot }}">
         Options {{ docroot_opts.options|default('Indexes FollowSymLinks MultiViews') }}
@@ -218,7 +210,7 @@ Define SERVERNAME {{ site.sitename }}
         threads={{ wsgi.threads|default(50) }} \
         maximum-requests={{ wsgi.maximum_requests|default(10000) }} \
         umask=0002 \
-        {% if apache22 -%} home={{ site_root }} {% endif %}\
+        {% if server.apache_version == 22 -%} home={{ site_root }} {% endif %}\
         python-path=${SRV}/www:${SRV}/src:${SRV}/venv/{{ site.virtual_env }}/lib/python2.7/site-packages \
         python-eggs=${SRV}/.python-eggs
     

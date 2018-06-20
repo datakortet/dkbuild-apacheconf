@@ -3,6 +3,7 @@
 DEFAULTS = {
     'server': {
         'admin': None,
+        'apache_version': 24,
     },
     'site': {
         'ports': [80],
