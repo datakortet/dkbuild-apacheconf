@@ -1,6 +1,8 @@
+.. image:: https://travis-ci.org/datakortet/dkbuild-apacheconf.svg?branch=master
+    :target: https://travis-ci.org/datakortet/dkbuild-apacheconf
 
-dkbuild-apacheconf -- build apache.conf from site.ini and server.ini
-====================================================================
+dkbuild-apacheconf - build apache.conf from site.ini and server.ini
+===================================================================
 
 
 Installing from PyPI
