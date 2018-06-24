@@ -6,7 +6,7 @@ import textwrap
 from jinja2 import Template
 from dkfileutils.path import Path
 
-from dkbuild_apacheconf.context import Context
+from .context import Context
 from . import __version__, __doc__ as module_doc
 import argparse
 

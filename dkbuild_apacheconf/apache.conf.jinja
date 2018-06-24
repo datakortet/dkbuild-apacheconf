@@ -1,76 +1,42 @@
-{%- set ssl_sertificate = "${SRV}/local/ssl/..." %}
-{%- set site_root = "${SRV}/www/" + site.sitename -%}
-
-{%- if site.django is defined %}
-   {%- set django = site.django %}
-{% else %}
-   {%- set django = "yes" %}
-{% endif -%}
-{%- if site.allow_trace is defined %}
-   {%- set allow_trace = site.allow_trace %}
-{% else %}
-   {%- set allow_trace = False %}
-{% endif -%}
-
-{%- if site.docroot is defined -%}
-   {%- set docroot = site.docroot %}
-{% else %}
-   {%- set docroot = site_root + "/docroot" %}
-{%- endif -%}
-
-{%- if docroot_opts is not defined %}
-   {% set docroot_opts = {} %}
-{% endif -%}
-   
-{%- set server_admin = server.admin %}
-{%- set redirect_to_https = false %}
-
-{%- if site.https is defined -%}
-    {% set use_https = True %}
-    {%- if site.https == 'yes' -%}
-       {%- set ports = [443, 80] %}
-    {%- elif site.https == 'only' -%}
-       {%- set ports = [443, 80] %}
-       {%- set redirect_to_https = true %}
-    {%- endif %}
-{%- else -%}
-    {% set use_https = False %}
-    {% set ports = [80] %}
-{%- endif -%}
-
-{%- for port in ports -%}
+{% for port in ports %}
 <VirtualHost *:{{ port }}>
-    ServerName {{ site.dns }}
+
+    ServerName {{ fqdns }}
     {%- if site.dns_alias is defined  %}
     {%- for alias in site.dns_alias.split('\n') %}
-    {% if alias -%}
+    {%- if alias %}
     ServerAlias {{ alias }}
     {%- endif %}
     {%- endfor %}
     {%- endif %}
+    {% if server.admin %}ServerAdmin {{ server.admin }}{% endif %}
 
     # these will be availablee from request.META
     SetEnv DK_SITE_NAME {{ site.sitename }}
-    SetEnv DK_SITE_DNS {{ site.dns }}
+    SetEnv DK_SITE_DNS {{ fqdns }}
     SetEnv DK_SITE_ROOT {{ site_root }}
     SetEnv DK_SRV_ROOT ${SRV}
     SetEnv DKSTATICROOT ${SRV}/data/static
-    {% if django == 'yes' %}
+    {% if django == 'yes' -%}
     SetEnv DK_VIRTUAL_ENV {{ site.virtual_env }}
-    SetEnv DKROOT ${SRV}/src/datakortet
     {% endif %}
-    {% if server.admin %}ServerAdmin {{ server.admin }}{% endif %}
+
     DocumentRoot {{ docroot }}
+
     <Directory "{{ docroot }}">
         Options {{ docroot_opts.options|default('Indexes FollowSymLinks MultiViews') }}
         AllowOverride {{ docroot_opts.allow_override|default('None') }}
         {% if not docroot_opts.hide_order is defined -%}
-        Order {{ docroot_opts.order|default('allow,deny') }} {%- endif %}
-        {% if not docroot_opts.hide_allow is defined -%}
-        Allow {{ docroot_opts.allow|default('from all') }} {%- endif %}
-        {% if docroot_opts.require is defined -%}
-        Require {{ docroot_opts.require }} {%- endif %}
+        Order {{ docroot_opts.order|default('allow,deny') }}
+        {%- endif %}
+        {%- if not docroot_opts.hide_allow is defined %}
+        Allow {{ docroot_opts.allow|default('from all') }}
+        {%- endif %}
+        {%- if docroot_opts.require is defined -%}
+        Require {{ docroot_opts.require }}
+        {% endif %}
     </Directory>
+##:41
 
     ErrorLog /var/log/apache2/{{ site.sitename }}-error.log
     CustomLog /var/log/apache2/{{ site.sitename }}-access.log combined
@@ -85,7 +51,12 @@
 
     {% if port == 80 and redirect_to_https -%}
     RewriteEngine On
-    RewriteRule /(.*) https://%{SERVER_NAME}/$1
+    RewriteRule /(.*) https://
+        {%- if site.www_prefix == 'require' -%}
+            www.{{ dns }}/$1
+        {%- else -%}
+            %{SERVER_NAME}/$1
+        {% endif %}
     {% else %}
 
     SetOutputFilter DEFLATE
@@ -94,10 +65,14 @@
     Header append Vary User-Agent env=!dont-vary
     AddType image/svg+xml svg svgz
     AddEncoding gzip svgz
-
+##:70
     {% if port == 443 -%}
     # SSL Certificates
     SSLEngine on
+    SSLCertificateFile {{ ssl.certpath }}/{{ ssl.cert_file }}
+    SSLCertificateKeyFile {{ ssl.certpath }}/{{ ssl.key_file }}
+    SSLCertificateChainFile {{ ssl.certpath }}/{{ ssl.chain_file }}
+    {#
     <IfDefine DKSTAGING>
         SSLCertificateFile ${LETSENCRYPT}/${SERVERNAME}/${SERVERNAME}.cer
         SSLCertificateKeyFile ${LETSENCRYPT}/${SERVERNAME}/${SERVERNAME}.key
@@ -108,6 +83,7 @@
         SSLCertificateKeyFile {{ ssl_sertificate }}/epost_datakortet_no.key
         SSLCertificateChainFile {{ ssl_sertificate }}/DigiCertCA.crt
     </IfDefine>
+    #}
     SetEnvIf User-Agent ".*MSIE.*" ssl-unclean-shutdown
 
     # IE >= 9, Android >= 2.2, Java >= 6
@@ -123,20 +99,21 @@
     Header always set X-Frame-Options {{ site.frame_options|default('SAMEORIGIN') }}
     {% endif -%}
     Header always set X-Content-Type-Options nosniff
-    
+
+##:100
     # Requires Apache >= 2.4 
     #SSLCompression off
     #SSLSessionTickets Off 
     #SSLUseStapling on 
     #SSLStaplingCache "shmcb:logs/stapling-cache(150000)"
 
-    # Due to CRIME and BREACH it is not safe to use compression over https, 
+    # Due to CRIME and BREACH it is not safe to use compression over https,
     # howvever, turning it off generally has major performance repercussions..
     # SetEnv no-gzip 1
 
     # BREACH migitation (turn off gzip only for foreign requests)
     SetEnvIfNoCase Referer .* self_referer=no
-    SetEnvIfNoCase Referer ^https://{{ site.dns|replace(".", "\\.") }}/ self_referer=yes
+    SetEnvIfNoCase Referer ^https://{{ fqdns|replace(".", "\\.") }}/ self_referer=yes
     SetEnvIf self_referer ^no$ no-gzip
     Header append Vary User-Agent env=!dont-vary
 
@@ -168,27 +145,23 @@
     FileETag MTime Size
     {% endif %}    
 
-    {% if site.www_prefix is defined and site.www_prefix == 'require' %}
     <IfModule mod_rewrite.c>
         RewriteEngine On
+        {% if site.www_prefix == 'require' %}
         RewriteCond %{HTTP_HOST} !^www\. [NC]
-        RewriteRule ^(.*)$ http://{{ site.dns }}/ [L,R=301]
-    </IfModule>
-    {%- endif %}
+        RewriteRule ^(.*)$ http{% if port == 443 %}s{% endif %}://{{ fqdns }}/ [L,R=301]
+        {%- endif %}
 
-    {% if site.www_prefix is defined and site.www_prefix == 'omit' %}
-    <IfModule mod_rewrite.c>
-        RewriteEngine On
+        {% if site.www_prefix == 'omit' %}
         RewriteCond %{HTTP_HOST} ^www\. [NC]
         RewriteRule ^(.*)$ http{% if port == 443 %}s{% endif %}://{{ site.dns }}/ [L,R=301]
-    </IfModule>
-    {%- endif %}
-    {% if not allow_trace %}
-    <IfModule mod_rewrite.c>
-        RewriteCond %{REQUEST_METHOD} ^(TRACE|TRACK|OPTIONS|PROPFIND)
+        {%- endif %}
+        {% if site.block_request_methods -%}
+        RewriteCond %{REQUEST_METHOD} ^({{ site.block_request_methods }})
         RewriteRule .* - [F]
+        {%- endif %}
     </IfModule>
-    {% endif %}
+
     {% if django == 'yes' %}
 
     {#
@@ -206,11 +179,10 @@
     {# first, or only, instance #}
     WSGIDaemonProcess {{ site.sitename }} \
         display-name={{ site.sitename }} \
-        {% if wsgi.processes -%}processes={{ wsgi.processes }}{%- endif %} \
-        threads={{ wsgi.threads|default(50) }} \
+        {% if wsgi.processes -%}processes={{ wsgi.processes }} {%- endif %} threads={{ wsgi.threads|default(50) }} \
         maximum-requests={{ wsgi.maximum_requests|default(10000) }} \
-        umask=0002 \
-        {% if server.apache_version == 22 -%} home={{ site_root }} {% endif %}\
+        umask=0002{{ " " }}
+        {%- if server.apache_version == 22 -%} home={{ site_root }} {% endif %}\
         python-path=${SRV}/www:${SRV}/src:${SRV}/venv/{{ site.virtual_env }}/lib/python2.7/site-packages \
         python-eggs=${SRV}/.python-eggs
     
@@ -225,17 +197,20 @@
     {% endif %}
     
     {% endif %} {# django == 'yes' #}
-
+##:204
     Alias /favicon.ico {{ site_root }}/docroot/favicon.ico
     Alias /robots.txt {{ site_root }}/docroot/robots.txt
     Alias /cookies.html {{ site_root }}/docroot/cookies.html
     Alias /privacy-policy.html {{ site_root }}/docroot/privacy-policy.html
+    {% if site.google_verify -%}
+    Alias /{{ site.google_verify }} ${SRV}/www/finaut/docroot/{{ site.google_verify }}
+    {% endif %}
 
     {% if django == 'yes' %}
     Alias /static/ {{ site_root }}/static/
     Alias /media/ {{ site_root }}/media/
     {% endif %}{# django == yes #}
-    
+
     {% endif %}{# redirect_to_https #}
 </VirtualHost>
 {% endfor %}

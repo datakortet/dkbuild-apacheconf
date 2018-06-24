@@ -1,8 +1,10 @@
 
+# check context.py for derived settings
 
 DEFAULTS = {
     'server': {
-        'admin': None,
+        'admin': 'bp@norsktest.no',  # FIXME
+        # 'admin': 'bp@datakortet.no',  # FIXME
         'apache_version': 24,
     },
     'site': {
@@ -11,9 +13,10 @@ DEFAULTS = {
         'sitename': 'sitename',
         'virtual_env': 'virtual_env',
         'www_prefix': None,
+        'block_request_methods': "TRACE|TRACK|OPTIONS|PROPFIND",
 
     },
     'wsgi': {
-        'processes': 4,
+        'processes': None,
     }
 }
