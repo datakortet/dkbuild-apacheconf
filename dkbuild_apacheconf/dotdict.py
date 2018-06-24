@@ -4,6 +4,7 @@ import json
 
 from past import builtins
 
+
 class dotdict(object):
     def __init__(self):
         self.ctx = {}

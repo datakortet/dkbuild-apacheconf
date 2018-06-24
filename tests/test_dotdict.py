@@ -24,6 +24,20 @@ def test_add_depth2():
     }
 
 
+def test_add_depth3():
+    dd = dotdict()
+    dd['hello.beautiful.world'] = 42
+    dd['hello.beautiful.moon'] = 43
+    assert dd.ctx == {
+        'hello': {
+            'beautiful': {
+                'world': 42,
+                'moon': 43
+            }
+        }
+    }
+
+
 def test_add_err():
     dd = dotdict()
     with pytest.raises(TypeError):
