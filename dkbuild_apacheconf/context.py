@@ -10,6 +10,7 @@ import ast
 from dkfileutils.path import Path
 from collections import defaultdict
 
+from dkbuild_apacheconf.dotdict import dotdict
 from . import mergesettings
 from .errors import NoServerIniError
 from .defaults import DEFAULTS
@@ -61,27 +62,25 @@ def read_settings_files(argv, args):
         sys.exit(1)
 
 
-class Context(object):
+class Context(dotdict):
     def __init__(self, argv, args):
-        self._ctx = {}
+        super(Context, self).__init__()
         self._fetch_context(argv, args)
-        # self._flatcache = self._flatten()
         self._derived_context(argv, args)
         if args.verbose:
             print(repr(self))
             print(str(self))
-            # print("CTX", json.dumps(self._ctx, indent=4))
 
     def __repr__(self):
         return '<CTX %s>' % json.dumps(self._flatten(), indent=4, sort_keys=True)
 
     def __str__(self):
-        cleanctx = {k: v for k, v in self._ctx.items() if not (k.startswith('run-once') or k.endswith('executable'))}
+        cleanctx = {k: v for k, v in self.ctx.items() if not (k.startswith('run-once') or k.endswith('executable'))}
         return '<CTX %s>' % json.dumps(cleanctx, indent=4, sort_keys=True)
 
     def render(self, template):
         # return prettify_conf(template.render(**self._flatcache))
-        return prettify_conf(template.render(**self._ctx))
+        return prettify_conf(template.render(**self.ctx))
 
     def _derived_context(self, argv, args):
         self['site_root'] = '${SRV}/www/' + self['site.sitename']
@@ -110,53 +109,11 @@ class Context(object):
         self['site.dns'] = dns
         self['fqdns'] = ('www.' if www_prefix else '') + dns
 
-
     def _fetch_context(self, argv, args):
         defaults = copy.deepcopy(DEFAULTS)
         settings = read_settings_files(argv, args)
-        self._ctx = mergesettings.merge(defaults, settings)
-
-    def _traverse(self, key):
-        cur = self._ctx
-        parts = key.split('.')
-        for part in parts[:-1]:
-            if part in cur:
-                cur = cur[part]
-        return cur, parts[-1], cur.get(parts[-1])  # parent, key, value
-
-    def get(self, key, default=None):
-        if key in self:
-            return self[key]
-        else:
-            return default
-
-    def __getitem__(self, key):
-        p, k, v = self._traverse(key)
-        return v
-        # return self._flatcache[key]
-
-    def __setitem__(self, key, value):
-        p, k, v = self._traverse(key)
-        p[k] = value
-        # self._flatcache[key] = value
-
-    def __contains__(self, key):
-        p, k, v = self._traverse(key)
-        return k in p
-        # return key in self._flatcache
+        self.ctx = mergesettings.merge(defaults, settings)
 
     def _flatten(self):
-        _flat = {}
-
-        def _key(c, k):
-            return k if not c else c + '.' + k
-
-        def _do_flatten(curkey, item):
-            for k, v in item.items():
-                if isinstance(v, dict):
-                    _do_flatten(_key(curkey, k), v)
-                else:
-                    _flat[_key(curkey, k)] = v
-
-        _do_flatten('', self._ctx)
-        return {k: v for k, v in _flat.items() if not (k.startswith('run-once') or k.endswith('executable'))}
+        return {k: v for k, v in super(Context, self)._flatten().items()
+                if not (k.startswith('run-once') or k.endswith('executable'))}
