@@ -4,6 +4,8 @@
 .. image:: https://codecov.io/gh/datakortet/dkbuild-apacheconf/branch/master/graph/badge.svg
   :target: https://codecov.io/gh/datakortet/dkbuild-apacheconf
 
+.. image:: https://codecov.io/gh/datakortet/dkbuild-apacheconf/branch/master/graphs/sunburst.svg
+   :target: https://codecov.io/gh/datakortet/dkbuild-apacheconf
 
 dkbuild-apacheconf - build apache.conf from site.ini and server.ini
 ===================================================================
