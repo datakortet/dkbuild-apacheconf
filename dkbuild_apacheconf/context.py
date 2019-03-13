@@ -109,6 +109,13 @@ class Context(dotdict):
         self['site.dns'] = dns
         self['fqdns'] = ('www.' if www_prefix else '') + dns
 
+        if 'site.google_verify' in self:
+            gverify = self['site.google_verify']
+            gverify = [line for line in gverify.splitlines() if line.strip()]
+            self['site.google_verify'] = gverify
+        else:
+            self['site.google_verify'] = []
+
     def _fetch_context(self, argv, args):
         defaults = copy.deepcopy(DEFAULTS)
         settings = read_settings_files(argv, args)

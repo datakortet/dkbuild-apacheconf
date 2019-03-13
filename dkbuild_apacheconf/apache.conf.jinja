@@ -202,9 +202,9 @@
     Alias /robots.txt {{ site_root }}/docroot/robots.txt
     Alias /cookies.html {{ site_root }}/docroot/cookies.html
     Alias /privacy-policy.html {{ site_root }}/docroot/privacy-policy.html
-    {% if site.google_verify -%}
-    Alias /{{ site.google_verify }} {{ site_root }}/docroot/{{ site.google_verify }}
-    {% endif %}
+    {% for gverify in site.google_verify -%}
+    Alias /{{ gverify }} {{ site_root }}/docroot/{{ gverify }}
+    {% endfor %}
 
     {% if django == 'yes' %}
     Alias /static/ {{ site_root }}/static/
