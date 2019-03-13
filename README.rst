@@ -4,6 +4,8 @@
 dkbuild-apacheconf - build apache.conf from site.ini and server.ini
 ===================================================================
 
+.. image:: https://codecov.io/gh/datakortet/dkbuild-apacheconf/branch/master/graph/badge.svg
+  :target: https://codecov.io/gh/datakortet/dkbuild-apacheconf
 
 Installing from PyPI
 --------------------
