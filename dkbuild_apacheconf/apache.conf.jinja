@@ -94,7 +94,7 @@
     SSLHonorCipherOrder On
     {% if redirect_to_https -%} {# not using ; includeSubDomains https://developer.mozilla.org/en-US/docs/Web/Security/HTTP_strict_transport_security#Preloading_Strict_Transport_Security #}
     Header always set Strict-Transport-Security "max-age=63072000; preload"
-    {% endif %}
+    {% endif -%}
     {% if not site.hide_frame_options is defined or site.hide_frame_options == True -%}
     Header always set X-Frame-Options {{ site.frame_options|default('SAMEORIGIN') }}
     {% endif -%}
@@ -179,7 +179,7 @@
     {# first, or only, instance #}
     WSGIDaemonProcess {{ site.sitename }} \
         display-name={{ site.sitename }} \
-        {% if wsgi.processes -%}processes={{ wsgi.processes }} {%- endif %} threads={{ wsgi.threads|default(50) }} \
+        {% if wsgi.processes -%}processes={{ wsgi.processes }} {%- endif %}threads={{ wsgi.threads|default(50) }} \
         maximum-requests={{ wsgi.maximum_requests|default(10000) }} \
         umask=0002{{ " " }}
         {%- if server.apache_version == 22 -%} home={{ site_root }} {% endif %}\
@@ -203,7 +203,7 @@
     Alias /cookies.html {{ site_root }}/docroot/cookies.html
     Alias /privacy-policy.html {{ site_root }}/docroot/privacy-policy.html
     {% if site.google_verify -%}
-    Alias /{{ site.google_verify }} ${SRV}/www/finaut/docroot/{{ site.google_verify }}
+    Alias /{{ site.google_verify }} {{ site_root }}/docroot/{{ site.google_verify }}
     {% endif %}
 
     {% if django == 'yes' %}
