@@ -15,7 +15,7 @@ class pset(dict):
 
 
 def test_find_server_ini():
-    args = pset(site='site-test.ini', server='server-test.ini')
+    args = pset(site='mysite/site-test.ini', server='server-test.ini')
     # print(dict(args.__dict__))
     assert find_server_ini([], args) == os.path.join(CURDIR, 'server-test.ini')
 
@@ -24,7 +24,7 @@ def test_find_server_ini():
 
 
 def test_read_ini():
-    vals = read_ini(['site-test.ini', 'server-test.ini'])
+    vals = read_ini(['mysite/site-test.ini', 'server-test.ini'])
     print(json.dumps(dict(vals), indent=4))
     assert vals['debug']['port'] == 8001
 
@@ -32,7 +32,7 @@ def test_read_ini():
 def test_context():
     ctx = Context(
         [], pset(
-            site='site-test.ini',
+            site='mysite/site-test.ini',
             server='server-test.ini',
             skip_server=False,
             verbose=True,
@@ -41,3 +41,4 @@ def test_context():
 
     print(ctx)
     assert ctx['ssl']['key_file'] == 'asdf.key'
+    assert ctx['server']['fire'] == 'fox'
