@@ -179,7 +179,7 @@
     {# first, or only, instance #}
     WSGIDaemonProcess {{ site.sitename }} \
         display-name={{ site.sitename }} \
-        {% if wsgi.processes -%}processes={{ wsgi.processes }} {%- endif %}threads={{ wsgi.threads|default(50) }} \
+        {% if wsgi.processes -%}processes={{ wsgi.processes }}{{ " " }}{%- endif %}threads={{ wsgi.threads|default(50) }} \
         maximum-requests={{ wsgi.maximum_requests|default(10000) }} \
         umask=0002{{ " " }}
         {%- if server.apache_version == 22 -%} home={{ site_root }} {% endif %}\
