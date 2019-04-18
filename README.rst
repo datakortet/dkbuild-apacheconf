@@ -32,6 +32,7 @@ Known issues:
 
  - we expect to be on a Ubuntu installation of Apache
  - sites are expected to be at ``${SRV}/www/<sitename>``
+ - virtualenvs are expected to be found at ``${SRV}/venv/<venvname>``
  - Django static and media folders are expected to be linked to
    ``${SRV}/www/<sitename>/static`` (and similarly for media).
  - Certain static files are expected to be under
@@ -332,3 +333,68 @@ The generated ``apache.conf`` from the ``site.ini`` file above::
         Alias /media/ ${SRV}/www/example/media/
     
     </VirtualHost>
+
+The corresponding ``wsgi.py`` file (it has not been tested with py3 yet)::
+
+    """
+    WSGI config for www_datakortet project.
+    
+    It exposes the WSGI callable as a module-level variable named ``application``.
+    
+    For more information on this file, see
+    https://docs.djangoproject.com/en/dev/howto/deployment/wsgi/
+    """
+    from ConfigParser import ConfigParser
+    
+    import sys, os
+    
+    # server variables
+    DK_SITE_ROOT = os.path.split(__file__)[0]
+    SITE_ROOT = DK_SITE_ROOT
+    DK_WWW = os.path.split(DK_SITE_ROOT)[0]
+    WWWDIR = DK_WWW
+    DK_SRV = os.path.split(DK_WWW)[0]
+    SRV = DK_SRV
+    
+    config = ConfigParser()
+    config.read([os.path.join(DK_SITE_ROOT, 'site.ini'),
+                 os.path.join(DK_SRV, 'server.ini')])
+    
+    # site properties
+    SHORT_NAME = config.get('site', 'shortname')
+    SITE_NAME = config.get('site', 'sitename')
+    DNS = config.get('site', 'dns')
+
+    
+    # virtualenv variables
+    VENV_NAME = config.get('site', 'venv')
+    
+    # derived settings
+    DJANGO_SETTINGS_MODULE = "%s.settings" % SITE_NAME
+    VIRTUAL_ENV = "%s/venv/%s" % (SRV, VENV_NAME)
+    
+    # activate virtualenv
+    # (warning: https://code.google.com/p/modwsgi/wiki/CheckingYourInstallation)
+    _activate = "%s/%s/activate_this.py" % (
+        VIRTUAL_ENV,
+        'Scripts' if sys.platform == 'win32' else 'bin'
+    )
+    if sys.version_info >= (3, 0):
+        exec(compile(open(_activate, 'rb').read(), _activate, 'exec'))
+    else:
+        execfile(_activate, dict(__file__=_activate))
+    
+    # make site directory importable
+    sys.path.insert(0, WWWDIR)
+    
+    # set all GLOBAL vars as environment variables
+    for _varname in [k for k in globals().keys() if k == k.upper()]:
+        _val = globals()[_varname]
+        if type(_val) == str:
+            os.environ[_varname] = _val
+    
+    # This application object is used by the development server
+    # as well as any WSGI server configured to use this file.
+    from django.core.wsgi import get_wsgi_application
+    application = get_wsgi_application()
+  
