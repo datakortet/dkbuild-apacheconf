@@ -12,7 +12,7 @@ dkbuild-apacheconf - build apache.conf from site.ini and server.ini
 
 NOTE / WARNING
 --------------
-This code is currently more proof-of-concept than reliable too.. you have been warned.
+This code is currently more proof-of-concept than reliable tool.. you have been warned.
 
 The generated file relies on a definition of ``SRV`` (which requires an Apache that supports ``mod_define``):: 
 
