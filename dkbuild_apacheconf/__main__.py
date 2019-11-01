@@ -7,6 +7,9 @@ import argparse
 
 
 def main():
+    available_commands = ', '.join([c[:-4] for c in dir(cli_commands) 
+                                    if c.endswith('_cmd')])
+
     p = argparse.ArgumentParser(
         description=module_doc
     )
@@ -21,7 +24,7 @@ def main():
     p.add_argument('-s', '--server', metavar='FILE',
                    help='server.ini file to use (default apache.conf)', default='server.ini')
     p.add_argument('--skip-server', action='store_true', help="don't look for server.ini file.")
-    p.add_argument('command', nargs='?', help="run command")
+    p.add_argument('command', nargs='?', help="run command (%s)" % available_commands)
 
     args, argv = p.parse_known_args()
 

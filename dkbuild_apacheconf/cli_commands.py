@@ -26,11 +26,15 @@ def init_cmd(argv, args):
 
 
 def run_cmd(argv, args):
+    """Create a new apache.conf file from site.ini and server.ini
+    """
     ctx = Context(argv, args)
     t = Template(APACHECONF_TEMPLATE.read())
     txt = ctx.render(t)
     if args.dry:
         print(txt)
     else:
-        apache_conf = Path(args.out)
-        apache_conf.write(txt)
+        with open(args.out, 'wb') as fp:
+            fp.write(txt.encode('u8').replace(b'\r\n', b'\n'))
+        # apache_conf = Path(args.out)
+        # apache_conf.write(txt.replace('\r\n', '\n'))

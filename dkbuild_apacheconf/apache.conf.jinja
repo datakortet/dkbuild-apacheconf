@@ -183,7 +183,7 @@
         maximum-requests={{ wsgi.maximum_requests|default(10000) }} \
         umask=0002{{ " " }}
         {%- if server.apache_version == 22 -%} home={{ site_root }} {% endif %}\
-        python-path=${SRV}/www:${SRV}/src:${SRV}/venv/{{ site.virtual_env }}/lib/python2.7/site-packages \
+        python-path=${SRV}/www:${SRV}/venv/{{ site.virtual_env }}/lib/python2.7/site-packages \
         python-eggs=${SRV}/.python-eggs
     
     WSGIScriptAlias / {{ site_root }}/wsgi.py  \
