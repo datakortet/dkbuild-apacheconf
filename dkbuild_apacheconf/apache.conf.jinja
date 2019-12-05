@@ -2,6 +2,13 @@
 <VirtualHost *:{{ port }}>
 
     ServerName {{ fqdns }}
+    {%- if port == 443 and site.https_dns_alias %}
+    {%- for alias in site.https_dns_alias.split('\n') %}
+    {%- if alias %}
+    ServerAlias {{ alias }}
+    {%- endif %}
+    {%- endfor %}
+    {% else %}
     {%- if site.dns_alias is defined  %}
     {%- for alias in site.dns_alias.split('\n') %}
     {%- if alias %}
@@ -10,6 +17,7 @@
     {%- endfor %}
     {%- endif %}
     {% if server.admin %}ServerAdmin {{ server.admin }}{% endif %}
+    {% endif %}
 
     # these will be availablee from request.META
     SetEnv DK_SITE_NAME {{ site.sitename }}
