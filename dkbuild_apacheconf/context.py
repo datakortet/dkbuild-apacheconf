@@ -107,7 +107,12 @@ class Context(dotdict):
             dns = dns[4:]
         self['dns'] = dns
         self['site.dns'] = dns
-        self['fqdns'] = ('www.' if www_prefix else '') + dns
+        if www_prefix == "require":
+            self['fqdns'] = 'www.' + dns
+        elif www_prefix == "omit":
+            self['fqdns'] = dns.split('www.')[-1]
+        else:
+            self['fqdns'] = dns
 
         if 'site.google_verify' in self:
             gverify = self['site.google_verify']
