@@ -78,11 +78,29 @@ class Context(dotdict):
         cleanctx = {k: v for k, v in self.ctx.items() if not (k.startswith('run-once') or k.endswith('executable'))}
         return '<CTX %s>' % json.dumps(cleanctx, indent=4, sort_keys=True)
 
+    def _vk(self, key, msg):
+        if key not in self.ctx:
+            print(msg)
+            return 1
+        return 0
+
+    def _validate_context(self):
+        errs = 0
+        if self.get('site.https') in {True, 'only'}:
+            errs += self._vk('ssl', 'The site.ini file must have an [ssl] section if https in True, only')
+        return errs
+
     def render(self, template):
         # return prettify_conf(template.render(**self._flatcache))
+        print(json.dumps(self.ctx, indent=4))
+        if self._validate_context() > 0:
+            print("found errors, exiting...")
+            sys.exit(1)
         return prettify_conf(template.render(**self.ctx))
 
     def _derived_context(self, argv, args):
+        # note: yes, no are automatically converted to True/False
+
         self['site_root'] = '${SRV}/www/' + self['site.sitename']
         self['django'] = self.get('site.django', 'yes')
         self['site.allow_trace'] = self.get('site.allow_trace', False)
@@ -92,15 +110,20 @@ class Context(dotdict):
         www_prefix = self['www_prefix'] = self.get('site.www_prefix', 'omit')
 
         self['redirect_to_https'] = False
-        if 'site.https' in self:
-            self['use_https'] = True
-            if self['site.https'] in (True, 'only'):
-                self['ports'] = [443, 80]
-            if self['site.https'] == 'only':
-                self['redirect_to_https'] = True
-        else:
+
+        if 'site.https' not in self:
+            self['site.https'] = False
+
+        if self['site.https'] is False:
             self['use_https'] = False
             self['ports'] = [80]
+
+        elif self['site.https'] in (True, 'only'):
+            self['use_https'] = True
+            self['ports'] = [443, 80]
+
+        if self['site.https'] == 'only':
+            self['redirect_to_https'] = True
 
         dns = self['site.dns']
         if dns.startswith('www.'):
