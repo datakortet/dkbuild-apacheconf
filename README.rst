@@ -133,7 +133,7 @@ The generated ``apache.conf`` from the ``site.ini`` file above::
     <VirtualHost *:443>
     
         ServerName www.example.com
-        ServerAdmin bp@norsktest.no
+        ServerAdmin bp@example.com
     
         # these will be availablee from request.META
         SetEnv DK_SITE_NAME example
