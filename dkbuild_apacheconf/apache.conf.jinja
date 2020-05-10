@@ -182,7 +182,7 @@
                 application-group=%{GLOBAL}
 
     #}
-    {% if use_https and port == 443 and wsgi.WSGIPassAuthorization == "on" %}
+    {% if use_https and port == 443 and wsgi.wsgipassauthorization == "on" %}
     WSGIPassAuthorization on
     {% endif %}
     {% if (use_https and port == 443) or (not use_https and port == 80) %}
