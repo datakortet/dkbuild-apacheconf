@@ -16,6 +16,7 @@ DEFAULTS = {
         'block_request_methods': "TRACE|TRACK|OPTIONS|PROPFIND",
 
     },
+    'redirects': {},
     'wsgi': {
         'processes': None,
     }

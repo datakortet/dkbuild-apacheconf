@@ -168,6 +168,9 @@
         RewriteCond %{REQUEST_METHOD} ^({{ site.block_request_methods }})
         RewriteRule .* - [F]
         {%- endif %}
+        {% for src, dst in redirects.items() %}
+        RewriteRule ^{{ src }} {{ dst }}
+        {%- endfor %}
     </IfModule>
 
     {% if django == 'yes' %}
