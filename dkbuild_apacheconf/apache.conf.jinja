@@ -182,7 +182,9 @@
                 application-group=%{GLOBAL}
 
     #}
-    
+    {% if use_https and port == 443 and wsgi.WSGIPassAuthorization == "on" %}
+    WSGIPassAuthorization on
+    {% endif %}
     {% if (use_https and port == 443) or (not use_https and port == 80) %}
     {# first, or only, instance #}
     WSGIDaemonProcess {{ site.sitename }} \
