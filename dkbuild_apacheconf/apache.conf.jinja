@@ -157,22 +157,23 @@
         RewriteEngine On
         {% if site.www_prefix == 'require' %}
         RewriteCond %{HTTP_HOST} !^www\. [NC]
-        RewriteRule ^(.*)$ http{% if port == 443 %}s{% endif %}://{{ fqdns }}/ [L,R=301]
+        RewriteRule ^(.*)$ http{% if use_https %}s{% endif %}://{{ fqdns }}/ [L,R=301]
         {%- endif %}
 
         {% if site.www_prefix == 'omit' %}
         RewriteCond %{HTTP_HOST} ^www\. [NC]
-        RewriteRule ^(.*)$ http{% if port == 443 %}s{% endif %}://{{ site.dns }}/ [L,R=301]
+        RewriteRule ^(.*)$ http{% if use_https %}s{% endif %}://{{ site.dns }}/ [L,R=301]
         {%- endif %}
         {% if site.block_request_methods -%}
         RewriteCond %{REQUEST_METHOD} ^({{ site.block_request_methods }})
         RewriteRule .* - [F]
         {%- endif %}
-        {% for src, dst in redirects.items() %}
-        RewriteRule ^{{ src }} {{ dst }}
-        {%- endfor %}
     </IfModule>
-
+    
+    {% for src, dst in redirects.items() %}
+    RedirectMatch ^{{ src }}(.*)$ {{ dst }}$1
+    {%- endfor %}
+    
     {% if django == 'yes' %}
 
     {#
@@ -203,11 +204,6 @@
         process-group={{ site.sitename }}      \
         application-group=%{GLOBAL}
     {% endif %} {# site.https #}
-
-    {% if (use_https and port == 80) %}
-    WSGIProcessGroup {{ site.sitename }}
-    WSGIScriptAlias / {{ site_root }}/wsgi.py
-    {% endif %}
     
     {% endif %} {# django == 'yes' #}
 ##:204
